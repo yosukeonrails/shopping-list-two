@@ -1,150 +1,119 @@
+
+
+
 var express = require('express');
 var bodyParser = require('body-parser');
-var jsonParser = bodyParser.json();
-var _ = require('underscore');
+var mongoose = require('mongoose');
 
-var Storage = {
-    add: function(name) {
-        var item = {
-            name: name,
-            id: this.setId
-        };
-        this.items.push(item);
-        this.setId += 1;
-        return item;
-    },
-
-    delete: function(id) {
-
-        var itemArray = this.items;
-        var deletedItem;
-        var i;
-        for (i = 0; i < itemArray.length; i++) {
-
-            // console.log(itemArray[i].id);
-            // console.log(i+1);
-            //for each ItemArray[i].id    1 ,2 ,3,4, == button pressed.
-            // delete ItemArray[i]
-            //
-            if (itemArray[i].id == id) {
-              deletedItem = itemArray[i];
-
-                // console.log( 'this is the item array'+ itemArray[i].id);
-
-                itemArray.splice(itemArray[i], 1);
-            } else {
-                console.log('it didnt run');
-            }
-          }
-
-          return deletedItem;
-
-    },
-    update:function(id, newName){
-
-      var itemArray = this.items;
-      var i;
-      for (i = 0; i < itemArray.length; i++) {
-
-          // console.log(itemArray[i].id);
-          // console.log(i+1);
-          //for each ItemArray[i].id    1 ,2 ,3,4, == button pressed.
-          // delete ItemArray[i]
-          //
-          if (itemArray[i].id == id) {
-              // console.log( 'this is the item array'+ itemArray[i].id);
-              itemArray[i].name= newName;
-
-            return itemArray[i];
-
-          } else {
-              console.log('it didnt run');
-          }
-        }
-
-
-    }
-
-};
-
-var createStorage = function() {
-    var storage = Object.create(Storage);
-    storage.items = [];
-    storage.setId = 1;
-    return storage;
-};
-
-var storage = createStorage();
-
-storage.add('Broad bean');
-storage.add('Tomatoes');
-storage.add('Peppers');
+var config = require('./config');
 
 var app = express();
+
+app.use(bodyParser.json());
 app.use(express.static('public'));
 
-app.get('/items', function(request, response) {
-    response.json(storage.items);
-});
 
+var runServer = function(callback) {
+    mongoose.connect(config.DATABASE_URL, function(err) {
+        if (err && callback) {
+            return callback(err);
+        }
 
-app.post('/items', jsonParser, function(request, response) {
-    if (!('name' in request.body)) {
-        return response.sendStatus(400);
-    }
+        app.listen(config.PORT, function() {
+            console.log('Listening on localhost:' + config.PORT);
+            if (callback) {
+                callback();
+            }
+        });
+    });
+};
 
-    var item = storage.add(request.body.name);
-    response.status(201).json(item);
-});
-
-
-
-app.delete('/items/:id', jsonParser, function(request, response) {
-
-    var itemId = request.params.id;
-
-    // IF NOT FOUND MATCHED IN THE SHOPPING LIST, ERROR
-    // OR , TAKE THE ITEM AND TAKE IT OUT OF ARRAY
-
-
-    var item = storage.delete(itemId);
-
-
-    if(!item){
-       response.sendStatus(404);
-    } else {
-      response.status(201).json(item);
-    }
-
-    console.log('this is ' + itemId);
-
-});
-
-
-app.put('/items/:id', jsonParser, function(request, response) {
-
-    var itemId = request.params.id;
-    var newName= request.body.name;
-
-    // IF NOT FOUND MATCHED IN THE SHOPPING LIST, ERROR
-    // OR , TAKE THE ITEM AND TAKE IT OUT OF ARRAY
-
-    var item = storage.update(itemId, newName);
-
-    if(!item){
-       response.sendStatus(404);
-    } else {
-      response.status(200).json(item);
-    }
-
-
-});
-
-
-
+if (require.main === module) {
+    runServer(function(err) {
+        if (err) {
+            console.error(err);
+        }
+    });
+}
 
 
 exports.app = app;
-exports.storage = storage;
+exports.runServer = runServer;
 
-app.listen(process.env.PORT || 8080, process.env.IP);
+
+var Item = require('./models/item');
+
+
+app.get('/items', function(req, res) {
+    Item.find({},function(err, items) {
+        if (err) {
+            return res.status(500).json({
+                message: 'Internal Server Error'
+            });
+        }
+        res.json(items);
+    });
+});
+
+
+app.post('/items', function(req, res) {
+    Item.create({
+        name: req.body.name
+    }, function(err, item) {
+        if (err) {
+            return res.status(500).json({
+                message: 'Internal Server Error'
+            });
+        }
+        res.status(201).json(item);
+    });
+});
+
+app.delete('/items/:id', function(req, res) {
+
+   Item.findOneAndRemove(
+
+        {id:req.param.id},
+
+        function(err, item) {
+            if (err) {
+                return res.status(500).json({
+                    message: 'Internal Server Error'
+                });
+            }
+            res.status(201).json(item);
+        });
+});
+
+
+app.put( '/items/:id', function(req, res) {
+
+   Item.findOneAndUpdate(
+      {id: req.param.id},
+      {name: req.body.name},
+
+        function(err, item) {
+            if (err) {
+                console.log('NOT UPDATAED!!!!');
+                return res.status(500).json({
+                    message: 'Internal Server Error'
+
+                });
+            }
+            res.status(201).json(item);
+            console.log('UPDATAED!!!!');
+        });
+});
+
+
+
+app.use('*', function(req, res) {
+    res.status(404).json({
+        message: 'Not Found'
+    });
+});
+
+
+
+//
+// app.listen(process.env.PORT || 8080, process.env.IP);
