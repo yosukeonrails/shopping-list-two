@@ -4,7 +4,8 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "istanbul cover _mocha",
+    "test":"mocha",
+    "fulltest": "istanbul cover _mocha",
     "start": "node server.js"
   },
   "author": "",

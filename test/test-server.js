@@ -115,7 +115,7 @@ describe('Shopping List', function() {
                 done();
             });
     });
-console.log('something');
+
     it('should show 404', function(done) {
         chai.request(app)
             .get('/blaaaaah')
