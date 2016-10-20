@@ -58,7 +58,8 @@ app.get('/items', function(req, res) {
 
 app.post('/items', function(req, res) {
     Item.create({
-        name: req.body.name
+        name: req.body.name,
+        
     }, function(err, item) {
         if (err) {
             return res.status(500).json({
@@ -94,14 +95,14 @@ app.put( '/items/:id', function(req, res) {
 
         function(err, item) {
             if (err) {
-                console.log('NOT UPDATAED!!!!');
+
                 return res.status(500).json({
                     message: 'Internal Server Error'
 
                 });
             }
-            res.status(201).json(item);
-            console.log('UPDATAED!!!!');
+            res.status(200).json(item);
+
         });
 });
 
